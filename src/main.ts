@@ -5,12 +5,16 @@ import { AppModule } from './app.module.js';
 import { Logger } from '@nestjs/common';
 import { CORS } from './config/cors.js';
 import { AllExceptionFilter } from './common/filters/http-exception.filter.js';
+import { TimeOutInterceptor } from './common/interceptors/timeout.interceptor.js';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
-  // Mensaje de errores
-  app.useGlobalFilters(new AllExceptionFilter);
+  // Mensaje de errores globales
+  app.useGlobalFilters(new AllExceptionFilter());
+
+  // Interceptores globales
+  app.useGlobalInterceptors(new TimeOutInterceptor());
 
   const logger = new Logger('Bootstrap');
 
@@ -25,8 +29,8 @@ async function bootstrap() {
   app.setGlobalPrefix('api/v1');
 
   // http
-  app.listen(HTTP_PORT, ()=>{
+  app.listen(HTTP_PORT, () => {
     logger.log(`🚀 HTTP server inicializado en el puerto: ${HTTP_PORT}`);
-  })
+  });
 }
 await bootstrap();
