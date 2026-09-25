@@ -4,9 +4,13 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module.js';
 import { Logger } from '@nestjs/common';
 import { CORS } from './config/cors.js';
+import { AllExceptionFilter } from './common/filters/http-exception.filter.js';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+
+  // Mensaje de errores
+  app.useGlobalFilters(new AllExceptionFilter);
 
   const logger = new Logger('Bootstrap');
 
