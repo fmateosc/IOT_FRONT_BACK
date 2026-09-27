@@ -8,6 +8,7 @@ import { UserDto } from '../dtos/user.dto.js';
 import * as bcrypt from 'bcrypt';
 import { randomBytes } from 'crypto';
 import { ACCESS_LEVEL, USER_ORIGIN } from '../../../constants/index.js';
+import { PaginationDto } from '../../../common/dtos/pagination.dto.js';
 
 @Injectable()
 export class UsersService {
@@ -103,5 +104,35 @@ export class UsersService {
     }
 
     return user;
+  }
+
+  // search all users
+  public async findAllUsers(paginationDto: PaginationDto): Promise<{
+    limit: number;
+    offset: number;
+    count: number;
+    users: UsersEntity[];
+  }> {
+    const limit = paginationDto.limit || Number(process.env.LIMIT) || 1000;
+    const offset = paginationDto.offset || Number(process.env.OFFSET) || 0;
+
+    console.log(limit, offset);
+
+    const [users, count] = await this.usersRepository
+      .createQueryBuilder('users')
+      .take(limit)
+      .skip(offset)
+      .getManyAndCount();
+
+    if (!count) {
+      throw new HttpException(`No hay usuarios registrados en el sistema`, HttpStatus.BAD_REQUEST);
+    }
+
+    return {
+      limit,
+      offset,
+      count,
+      users,
+    };
   }
 }
