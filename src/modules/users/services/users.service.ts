@@ -1,6 +1,6 @@
 // src/modules/services/users.service.ts
 
-import { Injectable } from '@nestjs/common';
+import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { UsersEntity } from '../entities/users.entity.js';
 import { Repository } from 'typeorm';
@@ -85,5 +85,23 @@ export class UsersService {
       message: `El usuario "${savedUser.username}" con el rol "${savedUser.userAccess}" ha sido creado con éxito`,
       user: savedUser,
     };
+  }
+
+  // search users by Id
+  public async findUserById(userId: string): Promise<UsersEntity> {
+    const queryBuilder = this.usersRepository
+      .createQueryBuilder('users')
+      .where({ id: userId });
+
+    const user = await queryBuilder.getOne();
+
+    if (!user) {
+      throw new HttpException(
+        `El usuario con Id ${userId} no se encuentra en el sistema`,
+        HttpStatus.NOT_FOUND,
+      );
+    }
+
+    return user;
   }
 }
