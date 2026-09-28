@@ -1,8 +1,9 @@
 // src/modules/users/entities/users.entity.ts
 
-import { Column, Entity } from 'typeorm';
+import { Column, Entity, OneToMany } from 'typeorm';
 import { BaseEntity } from '../../../config/base.entity.js';
 import { ACCESS_LEVEL, USER_ORIGIN } from '../../../constants/index.js';
+import { AclEntity } from '../../auth/entities/acl.entity.js';
 
 @Entity({ name: 'users' })
 export class UsersEntity extends BaseEntity {
@@ -75,4 +76,8 @@ export class UsersEntity extends BaseEntity {
     default: USER_ORIGIN.WEB,
   })
   userOrigin: string;
+
+  // acl
+  @OneToMany(() => AclEntity, (acl) => acl.createUserId)
+  aclRules: AclEntity[];
 }
