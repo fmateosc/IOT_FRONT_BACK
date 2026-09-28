@@ -9,6 +9,7 @@ import * as bcrypt from 'bcrypt';
 import { randomBytes } from 'crypto';
 import { ACCESS_LEVEL, USER_ORIGIN } from '../../../constants/index.js';
 import { PaginationDto } from '../../../common/dtos/pagination.dto.js';
+import { UpdateUserDto } from '../dtos/update.user.dto.js';
 
 @Injectable()
 export class UsersService {
@@ -125,7 +126,10 @@ export class UsersService {
       .getManyAndCount();
 
     if (!count) {
-      throw new HttpException(`No hay usuarios registrados en el sistema`, HttpStatus.BAD_REQUEST);
+      throw new HttpException(
+        `No hay usuarios registrados en el sistema`,
+        HttpStatus.BAD_REQUEST,
+      );
     }
 
     return {
@@ -133,6 +137,35 @@ export class UsersService {
       offset,
       count,
       users,
+    };
+  }
+
+  // update user by Id
+  public async updateUserById(
+    updatedUserData: UpdateUserDto,
+    userId: string,
+  ): Promise<{ status: boolean; user: UsersEntity }> {
+    const existingUser = await this.findUserById(userId);
+
+    if (updatedUserData.password) {
+      const saltRounds = Number(process.env.HASH_SALT) || 10;
+      updatedUserData.password = await bcrypt.hash(
+        updatedUserData.password,
+        saltRounds,
+      );
+    }
+
+    if (existingUser.userAccess === ACCESS_LEVEL.ADMIN) {
+      updatedUserData.isSuperuser = false;
+      updatedUserData.userAccess = ACCESS_LEVEL.ADMIN;
+      updatedUserData.userStatus = existingUser.userStatus;
+    }
+
+    await this.usersRepository.update(userId, updatedUserData);
+
+    return {
+      status: true,
+      user: { ...existingUser, ...updatedUserData },
     };
   }
 }

@@ -7,6 +7,7 @@ import {
   Param,
   ParseUUIDPipe,
   Post,
+  Put,
   Query,
 } from '@nestjs/common';
 import { UsersService } from '../services/users.service.js';
@@ -14,6 +15,7 @@ import { UsersEntity } from '../entities/users.entity.js';
 import { USER_ORIGIN } from '../../../constants/index.js';
 import { UserDto } from '../dtos/user.dto.js';
 import { PaginationDto } from '../../../common/dtos/pagination.dto.js';
+import { UpdateUserDto } from '../dtos/update.user.dto.js';
 
 @Controller('users')
 export class UsersController {
@@ -36,10 +38,22 @@ export class UsersController {
   }
 
   // get all users
-    @Get('all')
-    public async findAllUsers(
-        @Query() paginationDto: PaginationDto
-    ): Promise<{ limit: number, offset: number, count: number, users: UsersEntity[] }> {
-        return await this.usersService.findAllUsers(paginationDto)
-    }
+  @Get('all')
+  public async findAllUsers(@Query() paginationDto: PaginationDto): Promise<{
+    limit: number;
+    offset: number;
+    count: number;
+    users: UsersEntity[];
+  }> {
+    return await this.usersService.findAllUsers(paginationDto);
+  }
+
+  // update a user by id
+  @Put('update/:userId')
+  public async updateUserById(
+    @Param('userId', ParseUUIDPipe) userId: string,
+    @Body() updatedUserData: UpdateUserDto,
+  ): Promise<{ status: boolean; user: UsersEntity }> {
+    return await this.usersService.updateUserById(updatedUserData, userId);
+  }
 }
