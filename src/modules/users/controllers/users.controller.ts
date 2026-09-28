@@ -31,6 +31,14 @@ export class UsersController {
     return await this.usersService.createNewUser(newUserData, USER_ORIGIN.WEB);
   }
 
+  // create a new user by ROOT
+  @Post('register/root')
+  public async createNewUserByRoot(
+    @Body() newUserData: UserDto,
+  ): Promise<{ status: boolean; message: string; user: UsersEntity }> {
+    return await this.usersService.createNewUser(newUserData, USER_ORIGIN.ROOT);
+  }
+
   // find a user by id
   @Get('find/:userId')
   public async findUserById(
