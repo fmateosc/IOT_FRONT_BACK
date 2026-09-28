@@ -3,6 +3,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Param,
   ParseUUIDPipe,
@@ -55,5 +56,13 @@ export class UsersController {
     @Body() updatedUserData: UpdateUserDto,
   ): Promise<{ status: boolean; user: UsersEntity }> {
     return await this.usersService.updateUserById(updatedUserData, userId);
+  }
+
+  // delete a user by id
+  @Delete('delete/:userId')
+  public async deleteUserById(
+    @Param('userId', ParseUUIDPipe) userId: string,
+  ): Promise<{ status: boolean; user: UsersEntity }> {
+    return await this.usersService.deleteUserById(userId);
   }
 }

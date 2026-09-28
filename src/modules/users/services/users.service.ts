@@ -168,4 +168,18 @@ export class UsersService {
       user: { ...existingUser, ...updatedUserData },
     };
   }
+
+  // delete user by Id
+  public async deleteUserById(
+    userId: string,
+  ): Promise<{ status: boolean; user: UsersEntity }> {
+    const existingUser = await this.findUserById(userId);
+
+    await this.usersRepository.delete(userId);
+
+    return {
+      status: true,
+      user: existingUser,
+    };
+  }
 }
