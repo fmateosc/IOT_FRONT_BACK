@@ -10,6 +10,7 @@ import { randomBytes } from 'crypto';
 import { ACCESS_LEVEL, USER_ORIGIN } from '../../../constants/index.js';
 import { PaginationDto } from '../../../common/dtos/pagination.dto.js';
 import { UpdateUserDto } from '../dtos/update.user.dto.js';
+import { PasswordUserDto } from '../dtos/update.password.user.dto.js';
 
 @Injectable()
 export class UsersService {
@@ -181,5 +182,78 @@ export class UsersService {
       status: true,
       user: existingUser,
     };
+  }
+
+  // update user password
+  public async updateUserPasswordById(
+    userPasswordData: PasswordUserDto,
+    userId: string,
+  ): Promise<{ status: boolean; user: UsersEntity }> {
+    const user = await this.findBy({ key: 'id', value: userId });
+
+    if (!user) {
+      throw new HttpException(
+        `El usuario con el Id ${userId} no existe en el sistema`,
+        HttpStatus.NOT_FOUND,
+      );
+    }
+
+    if (
+      !userPasswordData.currentpwd ||
+      !(await bcrypt.compare(userPasswordData.currentpwd, user.password))
+    ) {
+      throw new HttpException(
+        'La contraseña antigua no coincide',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+
+    if (
+      !userPasswordData.newpwd ||
+      (await bcrypt.compare(userPasswordData.newpwd, user.password))
+    ) {
+      throw new HttpException(
+        'La nueva contraseña no puede coincidir con la antigua',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+
+    if (userPasswordData.newpwd !== userPasswordData.confirmpwd) {
+      throw new HttpException(
+        'La nueva contraseña y la de confirmación no coinciden',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+
+    const saltRounds = Number(process.env.HASH_SALT) || 10;
+    const hashedPassword = await bcrypt.hash(
+      userPasswordData.newpwd,
+      saltRounds,
+    );
+
+    await this.usersRepository.update(userId, { password: hashedPassword });
+
+    return {
+      status: true,
+      user: { ...user },
+    };
+  }
+
+  // **FUNCIONES**
+
+  // Find user by key-value pair
+  public async findBy({
+    key,
+    value,
+  }: {
+    key: keyof UserDto;
+    value: any;
+  }): Promise<UsersEntity | null> {
+    return await this.usersRepository
+      .createQueryBuilder('user')
+      .addSelect('user.password')
+      .where(`user.${key} = :value`, { value })
+      .andWhere('user.userStatus = :userStatus', { userStatus: true })
+      .getOne();
   }
 }

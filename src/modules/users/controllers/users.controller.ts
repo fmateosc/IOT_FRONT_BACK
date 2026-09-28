@@ -17,6 +17,7 @@ import { USER_ORIGIN } from '../../../constants/index.js';
 import { UserDto } from '../dtos/user.dto.js';
 import { PaginationDto } from '../../../common/dtos/pagination.dto.js';
 import { UpdateUserDto } from '../dtos/update.user.dto.js';
+import { PasswordUserDto } from '../dtos/update.password.user.dto.js';
 
 @Controller('users')
 export class UsersController {
@@ -64,5 +65,17 @@ export class UsersController {
     @Param('userId', ParseUUIDPipe) userId: string,
   ): Promise<{ status: boolean; user: UsersEntity }> {
     return await this.usersService.deleteUserById(userId);
+  }
+
+  // update user password by id
+  @Put('update/password/:userId')
+  public async updateUserPasswordById(
+    @Param('userId', ParseUUIDPipe) userId: string,
+    @Body() userPasswordData: PasswordUserDto,
+  ): Promise<{ status: boolean; user: UsersEntity }> {
+    return await this.usersService.updateUserPasswordById(
+      userPasswordData,
+      userId,
+    );
   }
 }
