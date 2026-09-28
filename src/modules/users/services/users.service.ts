@@ -7,16 +7,24 @@ import { Repository } from 'typeorm';
 import { UserDto } from '../dtos/user.dto.js';
 import * as bcrypt from 'bcrypt';
 import { randomBytes } from 'crypto';
-import { ACCESS_LEVEL, USER_ORIGIN } from '../../../constants/index.js';
 import { PaginationDto } from '../../../common/dtos/pagination.dto.js';
 import { UpdateUserDto } from '../dtos/update.user.dto.js';
 import { PasswordUserDto } from '../dtos/update.password.user.dto.js';
+import { AclEntity } from '../../auth/entities/acl.entity.js';
+import {
+  ACCESS_LEVEL,
+  USER_ORIGIN,
+  ACL_ACTION,
+  ACL_PERMISSION,
+} from '../../../constants/index.js';
 
 @Injectable()
 export class UsersService {
   constructor(
     @InjectRepository(UsersEntity)
     private readonly usersRepository: Repository<UsersEntity>,
+    @InjectRepository(AclEntity)
+    private readonly aclRepository: Repository<AclEntity>,
   ) {}
 
   // create a new user
@@ -82,6 +90,9 @@ export class UsersService {
     const savedUser = await this.usersRepository.save(newUser);
 
     // TODO: create acl rules
+    if (savedUser.userAccess === ACCESS_LEVEL.ADMIN) {
+      await this.createNewAclRule(savedUser);
+    }
 
     return {
       status: true,
@@ -255,5 +266,57 @@ export class UsersService {
       .where(`user.${key} = :value`, { value })
       .andWhere('user.userStatus = :userStatus', { userStatus: true })
       .getOne();
+  }
+
+  public async createNewAclRule(user: UsersEntity): Promise<void> {
+    const topics = [`/${user.username}/#`, `+/#`];
+
+    const permissions: {
+      action: ACL_ACTION;
+      permission: ACL_PERMISSION;
+    }[] = [
+      {
+        action: ACL_ACTION.ALL,
+        permission: ACL_PERMISSION.ALLOW,
+      },
+      {
+        action: ACL_ACTION.ALL,
+        permission: ACL_PERMISSION.DENY,
+      },
+    ];
+
+    const aclPromises = topics.map((topic, index) =>
+      this.createAndSaveAcl(
+        user.username,
+        permissions[index].action,
+        permissions[index].permission,
+        topic,
+        user.id,
+      ),
+    );
+
+    await Promise.all(aclPromises);
+  }
+
+  private async createAndSaveAcl(
+    username: string,
+    action: ACL_ACTION,
+    permission: ACL_PERMISSION,
+    topic: string,
+    createUserId: string,
+  ): Promise<AclEntity> {
+    const newAcl = this.aclRepository.create({
+      username,
+      action,
+      permission,
+      topic,
+      qos: 0,
+      retain: 0,
+      createUserId: {
+        id: createUserId,
+      },
+    });
+
+    return this.aclRepository.save(newAcl);
   }
 }
