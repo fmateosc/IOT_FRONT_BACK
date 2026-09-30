@@ -92,4 +92,19 @@ export class DevicesService {
       device: { ...existingDevice, ...updateDeviceData },
     };
   }
+
+  // Eliminar un dispositivo por el Id | Delete a device by ID
+  public async deleteDeviceById(
+    deviceId: string,
+    userInfo: IUserInfo,
+  ): Promise<{ status: boolean; device: DevicesEntity }> {
+    const existingDevice = await this.findDeviceById(deviceId, userInfo);
+
+    await this.deviceRepository.delete(deviceId);
+
+    return {
+      status: true,
+      device: existingDevice,
+    };
+  }
 }
