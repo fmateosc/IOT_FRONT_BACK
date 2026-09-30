@@ -17,3 +17,21 @@ export interface PayloadToken {
   userId: string;
   access: ACCESS_LEVEL;
 }
+
+export interface IUseToken {
+  role: string;
+  userId: string;
+  isExpired: boolean;
+}
+
+export interface IAuthTokenResult {
+  role: string;
+  userId: string;
+  iat: number;
+  exp: number;
+}
+
+export interface IUserInfo {
+  userId: string;
+  userAccess: string;
+}
