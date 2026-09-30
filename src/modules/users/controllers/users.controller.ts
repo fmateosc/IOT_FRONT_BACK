@@ -23,6 +23,9 @@ import { AuthGuard } from '../../auth/guard/auth.guard.js';
 import { AccessLevelGuard } from '../../auth/guard/access-level.guard.js';
 import { PublicAccess } from '../../auth/decorators/public.decorator.js';
 import { Access } from '../../auth/decorators/access.decorator.js';
+import * as authInterface from '../../auth/intefaces/auth.interface.js';
+import { GetUserInfo } from '../../auth/decorators/user.info.decorator.js';
+import type { IUserInfo } from '../../auth/intefaces/auth.interface.js';
 
 @Controller('users')
 @UseGuards(AuthGuard, AccessLevelGuard)
@@ -52,8 +55,9 @@ export class UsersController {
   @Get('find/:userId')
   public async findUserById(
     @Param('userId', ParseUUIDPipe) userId: string,
+    @GetUserInfo() userInfo: authInterface.IUserInfo
   ): Promise<UsersEntity> {
-    return await this.usersService.findUserById(userId);
+    return await this.usersService.findUserById(userId, userInfo);
   }
 
   // get all users
@@ -69,23 +73,25 @@ export class UsersController {
   }
 
   // update a user by id
-  @Access("ADMIN")
-  @Put('update/:userId')
-  public async updateUserById(
-    @Param('userId', ParseUUIDPipe) userId: string,
-    @Body() updatedUserData: UpdateUserDto,
-  ): Promise<{ status: boolean; user: UsersEntity }> {
-    return await this.usersService.updateUserById(updatedUserData, userId);
-  }
+    @Access("ADMIN")
+    @Put('update/:userId')
+    public async updateUserById(
+        @Param('userId', ParseUUIDPipe) userId: string,
+        @Body() updatedUserData: UpdateUserDto,
+        @GetUserInfo() userInfo: IUserInfo
+    ): Promise<{ status: boolean, user: UsersEntity }> {
+        return await this.usersService.updateUserById(updatedUserData, userId, userInfo);
+    }
 
   // delete a user by id
-  @Access("ADMIN")
-  @Delete('delete/:userId')
-  public async deleteUserById(
-    @Param('userId', ParseUUIDPipe) userId: string,
-  ): Promise<{ status: boolean; user: UsersEntity }> {
-    return await this.usersService.deleteUserById(userId);
-  }
+    @Access("ADMIN")
+    @Delete('delete/:userId')
+    public async deleteUserById(
+        @Param('userId', ParseUUIDPipe) userId: string,
+        @GetUserInfo() userInfo: IUserInfo
+    ): Promise<{ status: boolean, user: UsersEntity }> {
+        return await this.usersService.deleteUserById(userId, userInfo);
+    }
 
   // update user password by id
   @Access("ADMIN")
