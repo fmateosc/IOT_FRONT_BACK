@@ -7,6 +7,7 @@ import { Repository } from 'typeorm';
 import { DeviceDto } from '../dtos/devices.dto.js';
 import { IUserInfo } from '../../auth/intefaces/auth.interface.js';
 import { ACCESS_LEVEL } from '../../../constants/index.js';
+import { UpdateDeviceDto } from '../dtos/update.device.dto.js';
 
 @Injectable()
 export class DevicesService {
@@ -72,5 +73,23 @@ export class DevicesService {
     }
 
     return deviceResult;
+  }
+
+  // Actualizar un dispositivo por el Id | Update a device by ID
+  public async updateDeviceById(
+    updateDeviceData: UpdateDeviceDto,
+    deviceId: string,
+    userInfo: IUserInfo,
+  ): Promise<{ status: boolean; device: DevicesEntity }> {
+    const existingDevice = await this.findDeviceById(deviceId, userInfo);
+
+    await this.deviceRepository.update(deviceId, updateDeviceData);
+
+    // TODO: update in EMQX API
+
+    return {
+      status: true,
+      device: { ...existingDevice, ...updateDeviceData },
+    };
   }
 }
