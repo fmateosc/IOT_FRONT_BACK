@@ -1,4 +1,24 @@
-import { Controller } from '@nestjs/common';
+import { Body, Controller, Post, UseGuards } from '@nestjs/common';
+import { AuthGuard } from '../../auth/guard/auth.guard.js';
+import { AccessLevelGuard } from '../../auth/guard/access-level.guard.js';
+import { DevicesService } from '../services/devices.service.js';
+import { Access } from '../../auth/decorators/access.decorator.js';
+import { GetUserInfo } from '../../auth/decorators/user.info.decorator.js';
+import type { IUserInfo } from '../../auth/intefaces/auth.interface.js';
+import { DeviceDto } from '../dtos/devices.dto.js';
 
 @Controller('devices')
-export class DevicesController {}
+@UseGuards(AuthGuard, AccessLevelGuard)
+export class DevicesController {
+  constructor(private readonly deviceService: DevicesService) {}
+
+  // Crear nuevo dispositivo | Create new device
+  @Access('ADMIN')
+  @Post('register')
+  public async createNewDevice(
+    @Body() newDeviceData: DeviceDto,
+    @GetUserInfo() userInfo: IUserInfo,
+  ) {
+    return await this.deviceService.createNewDevice(newDeviceData, userInfo);
+  }
+}
