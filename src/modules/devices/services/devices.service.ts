@@ -8,6 +8,7 @@ import { DeviceDto } from '../dtos/devices.dto.js';
 import { IUserInfo } from '../../auth/intefaces/auth.interface.js';
 import { ACCESS_LEVEL } from '../../../constants/index.js';
 import { UpdateDeviceDto } from '../dtos/update.device.dto.js';
+import { PaginationDto } from '../../../common/dtos/pagination.dto.js';
 
 @Injectable()
 export class DevicesService {
@@ -105,6 +106,46 @@ export class DevicesService {
     return {
       status: true,
       device: existingDevice,
+    };
+  }
+
+  // Buscar todos los dispositivos | Find all devices
+  public async findAllDevices(
+    paginationDto: PaginationDto,
+    userInfo: IUserInfo,
+  ): Promise<{
+    limit: number;
+    offset: number;
+    count: number;
+    devices: DevicesEntity[];
+  }> {
+    const { userAccess, userId } = userInfo;
+    const limit = paginationDto.limit || Number(process.env.LIMIT) || 1000;
+    const offset = paginationDto.offset || Number(process.env.OFFSET) || 0;
+
+    const queryBuilder = this.deviceRepository
+      .createQueryBuilder('devices')
+      .leftJoinAndSelect('devices.createUserId', 'createUserId')
+      .take(limit)
+      .skip(offset);
+
+    if (userAccess === ACCESS_LEVEL.ADMIN) {
+      queryBuilder.andWhere('devices.createUserId = :userId', { userId });
+    }
+
+    if (paginationDto.type) {
+      queryBuilder.andWhere('devices.deviceType = :type', {
+        type: paginationDto.type,
+      });
+    }
+
+    const [devices, count] = await queryBuilder.getManyAndCount();
+
+    return {
+      limit,
+      offset,
+      count,
+      devices,
     };
   }
 }

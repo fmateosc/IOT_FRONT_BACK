@@ -7,6 +7,7 @@ import {
   ParseUUIDPipe,
   Post,
   Put,
+  Query,
   UseGuards,
 } from '@nestjs/common';
 import { AuthGuard } from '../../auth/guard/auth.guard.js';
@@ -17,6 +18,7 @@ import { GetUserInfo } from '../../auth/decorators/user.info.decorator.js';
 import type { IUserInfo } from '../../auth/intefaces/auth.interface.js';
 import { DeviceDto } from '../dtos/devices.dto.js';
 import { UpdateDeviceDto } from '../dtos/update.device.dto.js';
+import { PaginationDto } from '../../../common/dtos/pagination.dto.js';
 
 @Controller('devices')
 @UseGuards(AuthGuard, AccessLevelGuard)
@@ -67,4 +69,14 @@ export class DevicesController {
   ) {
     return await this.deviceService.deleteDeviceById(deviceId, userInfo);
   }
+
+  // Buscar todos los dispositivos | Find all devices
+    @Access('ADMIN')
+    @Get('all')
+    public async findAllDevices(
+        @Query() paginationDto: PaginationDto,
+        @GetUserInfo() userInfo: IUserInfo
+    ) {
+        return await this.deviceService.findAllDevices(paginationDto, userInfo);
+    }
 }
