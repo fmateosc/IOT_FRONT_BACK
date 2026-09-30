@@ -1,4 +1,4 @@
-import { Body, Controller, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, ParseUUIDPipe, Post, UseGuards } from '@nestjs/common';
 import { AuthGuard } from '../../auth/guard/auth.guard.js';
 import { AccessLevelGuard } from '../../auth/guard/access-level.guard.js';
 import { DevicesService } from '../services/devices.service.js';
@@ -20,5 +20,15 @@ export class DevicesController {
     @GetUserInfo() userInfo: IUserInfo,
   ) {
     return await this.deviceService.createNewDevice(newDeviceData, userInfo);
+  }
+
+  // Buscar un dispositivo por el Id | Search for a device by ID
+  @Access('ADMIN')
+  @Get('find/:deviceId')
+  public async findDeviceById(
+    @Param('deviceId', ParseUUIDPipe) deviceId: string,
+    @GetUserInfo() userInfo: IUserInfo,
+  ) {
+    return await this.deviceService.findDeviceById(deviceId, userInfo);
   }
 }
