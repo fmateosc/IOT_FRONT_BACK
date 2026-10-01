@@ -29,6 +29,9 @@
   "engines": {
      "node": "20.20.2"
   },
+  "overrides": {
+     "magic-string": "0.30.21"
+  },
   "dependencies": {
     "@nestjs/axios": "^12.0.1",
     "@nestjs/common": "^12.0.1",
