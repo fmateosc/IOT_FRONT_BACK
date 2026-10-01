@@ -1,6 +1,13 @@
 // src/modules/devices/services/devices.service.ts
 
-import { HttpException, HttpStatus, Injectable, Logger } from '@nestjs/common';
+import {
+  forwardRef,
+  HttpException,
+  HttpStatus,
+  Inject,
+  Injectable,
+  Logger,
+} from '@nestjs/common';
 import { DevicesEntity } from '../entities/devices.entity.js';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -9,7 +16,7 @@ import { IUserInfo } from '../../auth/intefaces/auth.interface.js';
 import { ACCESS_LEVEL } from '../../../constants/index.js';
 import { UpdateDeviceDto } from '../dtos/update.device.dto.js';
 import { PaginationDto } from '../../../common/dtos/pagination.dto.js';
-
+import { EmqxApiService } from '../../providers/http/emqx-api.service.js';
 @Injectable()
 export class DevicesService {
   private readonly logger = new Logger(DevicesService.name);
@@ -17,6 +24,8 @@ export class DevicesService {
   constructor(
     @InjectRepository(DevicesEntity)
     private readonly deviceRepository: Repository<DevicesEntity>,
+    @Inject(forwardRef(() => EmqxApiService))
+    private readonly httpEmqxApiService: EmqxApiService,
   ) {}
 
   // Crear nuevo dispositivo | Create new device
@@ -147,5 +156,10 @@ export class DevicesService {
       count,
       devices,
     };
+  }
+
+  // EMQX DEMO
+  public async testEmqxApi() {
+    return this.httpEmqxApiService.emqxApiGetTopicList();
   }
 }

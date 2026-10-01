@@ -71,12 +71,19 @@ export class DevicesController {
   }
 
   // Buscar todos los dispositivos | Find all devices
-    @Access('ADMIN')
-    @Get('all')
-    public async findAllDevices(
-        @Query() paginationDto: PaginationDto,
-        @GetUserInfo() userInfo: IUserInfo
-    ) {
-        return await this.deviceService.findAllDevices(paginationDto, userInfo);
-    }
+  @Access('ADMIN')
+  @Get('all')
+  public async findAllDevices(
+    @Query() paginationDto: PaginationDto,
+    @GetUserInfo() userInfo: IUserInfo,
+  ) {
+    return await this.deviceService.findAllDevices(paginationDto, userInfo);
+  }
+
+  // API EMQX
+  // DEMO
+  @Get('emqx/topics')
+  public async testEmqxApi() {
+    return await this.deviceService.testEmqxApi();
+  }
 }
