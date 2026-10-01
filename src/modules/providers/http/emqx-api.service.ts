@@ -5,6 +5,10 @@ import { SettingsService } from '../../settings/services/settings.service.js';
 import { ConfigService } from '@nestjs/config';
 import { AxiosError, AxiosRequestConfig } from 'axios';
 import { catchError, firstValueFrom } from 'rxjs';
+import {
+  IEmqxBannedParams,
+  IEmqxBannedResponseData,
+} from '../../../common/interfaces/emqx.interface.js';
 
 @Injectable()
 export class EmqxApiService {
@@ -52,7 +56,13 @@ export class EmqxApiService {
             })
             .pipe(
               catchError((error: AxiosError) => {
-                throw new Error(`Ha ocurrido un error: ${error.message}`);
+                const detail = error.response?.data
+                  ? JSON.stringify(error.response.data)
+                  : error.message;
+                this.logger.error(
+                  `EMQX respondió ${error.response?.status}: ${detail}`,
+                );
+                throw new Error(`Ha ocurrido un error: ${detail}`);
               }),
             ),
         );
@@ -98,7 +108,7 @@ export class EmqxApiService {
 
   // demo list of topics
   public emqxApiGetTopicList(): Promise<any> {
-    const url = `http://${this.dataSettings?.emqxAppHost}:${this.dataSettings?.emqxAppPort}/api/v5/topics`;
+    const url = `${this.dataSettings?.emqxAppHost}:${this.dataSettings?.emqxAppPort}/api/v5/topics`;
 
     return this.requestWithConfig('get', url);
   }
@@ -144,5 +154,19 @@ export class EmqxApiService {
   // These are formatted names.
   private formatText(text: string): string {
     return text.split(' ').join('_');
+  }
+
+  // Get the full banned list
+  public emqxApiGetBannedList(): Promise<IEmqxBannedResponseData> {
+    const url = `${this.dataSettings?.emqxAppHost}:${this.dataSettings?.emqxAppPort}/api/v5/banned`;
+
+    return this.requestWithConfig('get', url);
+  }
+
+  // Delete from banned list
+  public emqxApiDeleteBanned(params: IEmqxBannedParams): Promise<number> {
+    const url = `${this.dataSettings?.emqxAppHost}:${this.dataSettings?.emqxAppPort}/api/v5/banned/${params.as}/${params.who}`;
+
+    return this.requestWithConfig('delete', url);
   }
 }

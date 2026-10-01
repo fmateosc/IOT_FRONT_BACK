@@ -17,6 +17,7 @@ import { ACCESS_LEVEL } from '../../../constants/index.js';
 import { UpdateDeviceDto } from '../dtos/update.device.dto.js';
 import { PaginationDto } from '../../../common/dtos/pagination.dto.js';
 import { EmqxApiService } from '../../providers/http/emqx-api.service.js';
+import { IEmqxBannedResponseData } from '../../../common/interfaces/emqx.interface.js';
 @Injectable()
 export class DevicesService {
   private readonly logger = new Logger(DevicesService.name);
@@ -49,10 +50,50 @@ export class DevicesService {
       },
     });
 
+    // API EMQX
+    if (
+      savedDevice &&
+      (await this.httpEmqxApiService.ensureSettingsInitialized())
+    ) {
+      const [respEmqxBridge, bannedList] = await Promise.all([
+        this.httpEmqxApiService.emqxApiPostBridge({
+          name: savedDevice.deviceName,
+          user: savedDevice.createUserId.username || 'emqx',
+          serialId: savedDevice.deviceSerial,
+        }),
+
+        this.httpEmqxApiService.emqxApiGetBannedList(),
+      ]);
+
+      await this.updateDeviceById(
+        {
+          bridgeRuleId: `${respEmqxBridge.type}:${respEmqxBridge.name}`,
+        },
+        savedDevice.id,
+        userInfo,
+      );
+
+      await this.checkWhoParameter(bannedList, newDeviceData.deviceSerial);
+    }
+
     return {
       message: `El dispositivo "${savedDevice.deviceName}" con el serial "${savedDevice.deviceSerial}" se ha creado correctamente`,
       device: savedDevice,
     };
+  }
+
+  // Eliminar de la lista de baneados si existe | Remove from the banned list if it exists
+  private async checkWhoParameter(
+    response: IEmqxBannedResponseData,
+    whoParam: string,
+  ): Promise<void> {
+    const bannedSet = new Set(response.data.map((item) => item.who));
+    if (bannedSet.has(whoParam)) {
+      await this.httpEmqxApiService.emqxApiDeleteBanned({
+        as: 'clientid',
+        who: whoParam,
+      });
+    }
   }
 
   // Buscar un dispositivo por el Id | Search for a device by ID
