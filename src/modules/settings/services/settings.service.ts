@@ -31,4 +31,10 @@ export class SettingsService {
       settings: savedSettings,
     };
   }
+
+  // find settings
+  public async findGeneralSettings(): Promise<GeneralSettingsEntity | null> {
+    const queryBuilder = this.settingsRepository.createQueryBuilder();
+    return await queryBuilder.getOne();
+  }
 }
