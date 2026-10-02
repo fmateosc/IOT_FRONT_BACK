@@ -1,3 +1,5 @@
+// src/modules/devices/devices.module.ts
+
 import { forwardRef, Module } from '@nestjs/common';
 import { DevicesService } from './services/devices.service.js';
 import { DevicesController } from './controllers/devices.controller.js';

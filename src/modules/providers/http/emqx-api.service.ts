@@ -108,7 +108,7 @@ export class EmqxApiService {
 
   // demo list of topics
   public emqxApiGetTopicList(): Promise<any> {
-    const url = `${this.dataSettings?.emqxAppHost}:${this.dataSettings?.emqxAppPort}/api/v5/topics`;
+    const url = `http://${this.dataSettings?.emqxAppHost}:${this.dataSettings?.emqxAppPort}/api/v5/bridges`;
     console.log("URL: ", url);
     return this.requestWithConfig('get', url);
   }
@@ -145,7 +145,7 @@ export class EmqxApiService {
         max_buffer_bytes: 104857600,
       },
       enable_pipelining: 100,
-      local_topic: `/${user}/+/${serialId}/#`, // /emqx1/demo/000000002/data1/equipo01
+      local_topic: `/${user}/+/${serialId}/#`, // /emqx1/000002/data1/equipo01
     };
 
     return this.requestWithConfig('post', url, data);
