@@ -166,7 +166,7 @@ export class EmqxApiService {
 
   // Delete from banned list
   public emqxApiDeleteBanned(params: IEmqxBannedParams): Promise<number> {
-    const url = `${this.dataSettings?.emqxAppHost}:${this.dataSettings?.emqxAppPort}/api/v5/banned/${params.as}/${params.who}`;
+    const url = `http://${this.dataSettings?.emqxAppHost}:${this.dataSettings?.emqxAppPort}/api/v5/banned/${params.as}/${params.who}`;
 
     return this.requestWithConfig('delete', url);
   }
