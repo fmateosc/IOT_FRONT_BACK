@@ -124,7 +124,7 @@ export class EmqxApiService {
     serialId: string;
   }): Promise<any> {
     const url = `http://${this.dataSettings?.emqxAppHost}:${this.dataSettings?.emqxAppPort}/api/v5/bridges`;
-
+    console.log("URL: ", url);
     const data = {
       name: `http_${this.formatText(name)}`,
       type: 'webhook',
@@ -133,7 +133,7 @@ export class EmqxApiService {
       pool_size: 4,
       enable: true,
       method: 'post',
-      url: `${this.configService.get('HTTP_HOST')}:${this.configService.get('HTTP_PORT')}/api/v1/messages/register`,
+      url: `http://${this.configService.get('HTTP_HOST')}:${this.configService.get('HTTP_PORT')}/api/v1/messages/register`,
       max_retries: 3,
       request_timeout: '15s',
       pool_type: 'random',
@@ -147,7 +147,8 @@ export class EmqxApiService {
       enable_pipelining: 100,
       local_topic: `/${user}/+/${serialId}/#`, // /emqx1/000002/data1/equipo01
     };
-
+    console.log("URL: ", url);
+    console.log("Data: ", data);
     return this.requestWithConfig('post', url, data);
   }
 
