@@ -159,7 +159,7 @@ export class EmqxApiService {
 
   // Get the full banned list
   public emqxApiGetBannedList(): Promise<IEmqxBannedResponseData> {
-    const url = `${this.dataSettings?.emqxAppHost}:${this.dataSettings?.emqxAppPort}/api/v5/banned`;
+    const url = `http://${this.dataSettings?.emqxAppHost}:${this.dataSettings?.emqxAppPort}/api/v5/banned`;
 
     return this.requestWithConfig('get', url);
   }
