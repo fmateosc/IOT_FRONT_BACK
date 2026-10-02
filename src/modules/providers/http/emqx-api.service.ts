@@ -109,7 +109,7 @@ export class EmqxApiService {
   // demo list of topics
   public emqxApiGetTopicList(): Promise<any> {
     const url = `${this.dataSettings?.emqxAppHost}:${this.dataSettings?.emqxAppPort}/api/v5/topics`;
-
+    console.log("URL: ", url);
     return this.requestWithConfig('get', url);
   }
 
