@@ -133,7 +133,7 @@ export class EmqxApiService {
       pool_size: 4,
       enable: true,
       method: 'post',
-      url: `http://${this.configService.get('HTTP_HOST')}:${this.configService.get('HTTP_PORT')}/api/v1/messages/register`,
+      url: `http://${this.dataSettings?.emqxAppHost}:${this.configService.get('HTTP_PORT')}/api/v1/messages/register`,
       max_retries: 3,
       request_timeout: '15s',
       pool_type: 'random',
