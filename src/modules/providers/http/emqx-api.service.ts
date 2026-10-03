@@ -109,7 +109,7 @@ export class EmqxApiService {
   // demo list of topics
   public emqxApiGetTopicList(): Promise<any> {
     const url = `http://${this.dataSettings?.emqxAppHost}:${this.dataSettings?.emqxAppPort}/api/v5/bridges`;
-    console.log("URL: ", url);
+    console.log('URL: ', url);
     return this.requestWithConfig('get', url);
   }
 
@@ -124,7 +124,7 @@ export class EmqxApiService {
     serialId: string;
   }): Promise<any> {
     const url = `http://${this.dataSettings?.emqxAppHost}:${this.dataSettings?.emqxAppPort}/api/v5/bridges`;
-    console.log("URL: ", url);
+
     const data = {
       name: `http_${this.formatText(name)}`,
       type: 'webhook',
@@ -147,8 +147,7 @@ export class EmqxApiService {
       enable_pipelining: 100,
       local_topic: `/${user}/+/${serialId}/#`, // /emqx1/000002/data1/equipo01
     };
-    console.log("URL: ", url);
-    console.log("Data: ", data);
+
     return this.requestWithConfig('post', url, data);
   }
 
