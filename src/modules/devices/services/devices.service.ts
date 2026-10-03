@@ -45,12 +45,9 @@ export class DevicesService {
 
     const deviceWithUser = await this.deviceRepository.findOne({
       where: { id: savedDevice.id },
-      relations: {
-        createUserId: true,
-      },
+      relations: { createUserId: true },
     });
 
-    // API EMQX
     if (
       savedDevice &&
       (await this.httpEmqxApiService.ensureSettingsInitialized())
@@ -58,10 +55,9 @@ export class DevicesService {
       const [respEmqxBridge, bannedList] = await Promise.all([
         this.httpEmqxApiService.emqxApiPostBridge({
           name: savedDevice.deviceName,
-          user: savedDevice.createUserId.username || 'emqx',
+          user: deviceWithUser?.createUserId?.username || 'emqx', // ← usar deviceWithUser
           serialId: savedDevice.deviceSerial,
         }),
-
         this.httpEmqxApiService.emqxApiGetBannedList(),
       ]);
 
