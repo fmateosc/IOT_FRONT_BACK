@@ -30,6 +30,7 @@ export class DevicesService {
   ) {}
 
   // Crear nuevo dispositivo | Create new device
+  // Versión mejorada | Improved version
   public async createNewDevice(
     newDeviceData: DeviceDto,
     userInfo: IUserInfo,
@@ -43,37 +44,66 @@ export class DevicesService {
     // Guardar dispositivo | Save device
     const savedDevice = await this.deviceRepository.save(deviceEntity);
 
-    const deviceWithUser = await this.deviceRepository.findOne({
-      where: { id: savedDevice.id },
-      relations: { createUserId: true },
-    });
+    // TODO: API EMQX
+    const isInitialized =
+      await this.httpEmqxApiService.ensureSettingsInitialized();
 
-    if (
-      savedDevice &&
-      (await this.httpEmqxApiService.ensureSettingsInitialized())
-    ) {
-      const [respEmqxBridge, bannedList] = await Promise.all([
-        this.httpEmqxApiService.emqxApiPostBridge({
-          name: savedDevice.deviceName,
-          user: deviceWithUser?.createUserId?.username || 'emqx', // ← usar deviceWithUser
-          serialId: savedDevice.deviceSerial,
-        }),
-        this.httpEmqxApiService.emqxApiGetBannedList(),
-      ]);
+    if (isInitialized) {
+      try {
+        // Crea el bridge y busca los baneados | Create the bridge and search for the banned ones
+        const [respEmqxBridge, bannedList] = await Promise.all([
+          this.httpEmqxApiService.emqxApiPostBridge({
+            name: savedDevice.deviceName,
+            user: savedDevice.createUserId.username || 'emqx',
+            serialId: savedDevice.deviceSerial,
+          }),
+          this.httpEmqxApiService.emqxApiGetBannedList(),
+        ]);
+        // Actualiza el dispositivo con la data del bridge | Update the device with the bridge data
+        const updatePromise = this.updateDeviceById(
+          {
+            bridgeRuleId: `${respEmqxBridge.type}:${respEmqxBridge.name}`,
+            bridgeRuleEnabled: true, // new
+          },
+          savedDevice.id,
+          userInfo,
+        );
 
-      await this.updateDeviceById(
-        {
-          bridgeRuleId: `${respEmqxBridge.type}:${respEmqxBridge.name}`,
-        },
-        savedDevice.id,
-        userInfo,
-      );
+        const unbanPromise = this.checkWhoParameter(
+          bannedList,
+          savedDevice.deviceSerial,
+        );
 
-      await this.checkWhoParameter(bannedList, newDeviceData.deviceSerial);
+        // Ejecutar en paralelo y verificar errores | Run in parallel and check for errors
+        const [updateResult, unbanResult] = await Promise.allSettled([
+          updatePromise,
+          unbanPromise,
+        ]);
+
+        const hasError = [updateResult, unbanResult].some(
+          (r) => r.status === 'rejected',
+        );
+
+        if (hasError) {
+          // Rollback si algo falló | Rollback if something went wrong
+          await this.deviceRepository.delete(savedDevice.id);
+          throw new HttpException(
+            'One or more EMQX operations failed. Changes have been rolled back.',
+            HttpStatus.INTERNAL_SERVER_ERROR,
+          );
+        }
+      } catch (err) {
+        // Rollback por cualquier excepción imprevista | Rollback for any unforeseen exceptions
+        await this.deviceRepository.delete(savedDevice.id);
+        throw new HttpException(
+          'Failed to create device due to EMQX API error. Changes have been rolled back.',
+          HttpStatus.INTERNAL_SERVER_ERROR,
+        );
+      }
     }
 
     return {
-      message: `El dispositivo "${savedDevice.deviceName}" con el serial "${savedDevice.deviceSerial}" se ha creado correctamente`,
+      message: `Device "${savedDevice.deviceName}" with serial "${savedDevice.deviceSerial}" was created successfully`,
       device: savedDevice,
     };
   }
@@ -123,6 +153,7 @@ export class DevicesService {
   }
 
   // Actualizar un dispositivo por el Id | Update a device by ID
+  // Versión mejorada | Improved version
   public async updateDeviceById(
     updateDeviceData: UpdateDeviceDto,
     deviceId: string,
@@ -132,18 +163,55 @@ export class DevicesService {
 
     await this.deviceRepository.update(deviceId, updateDeviceData);
 
+    const ensureSettingsInitialized =
+      await this.httpEmqxApiService.ensureSettingsInitialized();
+
     // TODO: update in EMQX API
-    if (updateDeviceData.deviceStatus && !updateDeviceData.bridgeRuleId) {
-      await this.httpEmqxApiService.emqxApiDeleteBanned({
-        as: 'clientid',
-        who: existingDevice.deviceSerial,
-      });
-    } else if (!updateDeviceData.bridgeRuleId) {
-      await this.httpEmqxApiService.emqxApiPostAddBanned({
-        as: 'clientid',
-        who: existingDevice.deviceSerial,
-        reason: 'Disabled by uUser',
-      });
+    // Versión mejorada | Improved version
+    // Baneo por cambio en deviceStatus | Ban due to change in deviceStatus
+    if (
+      ensureSettingsInitialized &&
+      typeof updateDeviceData.deviceStatus === 'boolean' &&
+      existingDevice.bridgeRuleId
+    ) {
+      if (existingDevice.deviceStatus === updateDeviceData.deviceStatus) {
+        throw new HttpException(
+          `The device is already ${updateDeviceData.deviceStatus ? 'enabled' : 'disabled'}`,
+          HttpStatus.BAD_REQUEST,
+        );
+      }
+
+      if (updateDeviceData.deviceStatus) {
+        await this.httpEmqxApiService.emqxApiDeleteBanned({
+          as: 'clientid',
+          who: existingDevice.deviceSerial,
+        });
+      } else {
+        await this.httpEmqxApiService.emqxApiPostAddBanned({
+          as: 'clientid',
+          who: existingDevice.deviceSerial,
+          reason: 'Disabled by User',
+        });
+      }
+    }
+
+    // Activación/desactivación del bridge / Bridge enable/disable
+    if (
+      typeof updateDeviceData.bridgeRuleEnabled === 'boolean' &&
+      existingDevice.bridgeRuleId
+    ) {
+      if (
+        updateDeviceData.bridgeRuleEnabled === existingDevice.bridgeRuleEnabled
+      ) {
+        throw new HttpException(
+          `The device bridge rule is already ${updateDeviceData.bridgeRuleEnabled ? 'enabled' : 'disabled'}`,
+          HttpStatus.BAD_REQUEST,
+        );
+      }
+      await this.httpEmqxApiService.emqxApiPutEnableDisableBridge(
+        existingDevice.bridgeRuleId,
+        updateDeviceData.bridgeRuleEnabled,
+      );
     }
 
     return {
@@ -153,33 +221,52 @@ export class DevicesService {
   }
 
   // Eliminar un dispositivo por el Id | Delete a device by ID
+  // Versión mejorada | Improved version
   public async deleteDeviceById(
     deviceId: string,
     userInfo: IUserInfo,
   ): Promise<{ status: boolean; device: DevicesEntity }> {
     const existingDevice = await this.findDeviceById(deviceId, userInfo);
 
+    // Eliminar el dispositivo en base de datos | Delete the device from the database
     await this.deviceRepository.delete(deviceId);
 
-    // Delete de bridge emqx API
-    // Add device ban emqx API
-    if (existingDevice) {
-      const result = await Promise.allSettled([
-        this.httpEmqxApiService.emqxApiDeleteBridge(
-          existingDevice.bridgeRuleId,
-        ),
+    const ensureSettingsInitialized =
+      await this.httpEmqxApiService.ensureSettingsInitialized();
+
+    if (existingDevice && ensureSettingsInitialized) {
+      const tasks: Promise<any>[] = [];
+
+      // Solo elimina el bridge si hay uno | Only remove the bridge if there is one
+      if (existingDevice.bridgeRuleId) {
+        tasks.push(
+          this.httpEmqxApiService.emqxApiDeleteBridge(
+            existingDevice.bridgeRuleId,
+          ),
+        );
+      }
+
+      // Agrega al baneo | Add to ban
+      tasks.push(
         this.httpEmqxApiService.emqxApiPostAddBanned({
           as: 'clientid',
           who: existingDevice.deviceSerial,
-          reason: 'Deleted by user',
+          reason: 'Deleted by User',
         }),
-      ]);
+      );
 
-      result.forEach((result, index) => {
-        if (result.status === 'rejected') {
-          console.error(`Error en operación ${index}:`, result.reason);
-        }
-      });
+      const results = await Promise.allSettled(tasks);
+
+      const failed = results.find((result) => result.status === 'rejected');
+
+      if (failed) {
+        // Si algo falló, restauramos el dispositivo | If something went wrong, restore the device
+        await this.createNewDevice(existingDevice, userInfo); // rollback
+        throw new HttpException(
+          'One or more EMQX operations failed. Changes have been rolled back.',
+          HttpStatus.INTERNAL_SERVER_ERROR,
+        );
+      }
     }
 
     return {

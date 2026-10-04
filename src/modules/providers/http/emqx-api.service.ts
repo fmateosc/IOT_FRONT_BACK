@@ -181,14 +181,24 @@ export class EmqxApiService {
       at: params.at,
       until: params.until,
     };
-    
+
     return this.requestWithConfig('post', url, data);
   }
 
-   // delete bridge
-      public emqxApiDeleteBridge(id: string): Promise<number> {
-          const url = `http://${this.dataSettings?.emqxAppHost}:${this.dataSettings?.emqxAppPort}/api/v5/bridges/${id}`;
-          
-          return this.requestWithConfig('delete', url);
-      }
+  // enable/disable bridge
+  public emqxApiPutEnableDisableBridge(
+    id: string,
+    enable: boolean,
+  ): Promise<any> {
+    const url = `http://${this.dataSettings?.emqxAppHost}:${this.dataSettings?.emqxAppPort}/api/v5/bridges/${id}/enable/${enable}`;
+    
+    return this.requestWithConfig('put', url);
+  }
+
+  // delete bridge
+  public emqxApiDeleteBridge(id: string): Promise<number> {
+    const url = `http://${this.dataSettings?.emqxAppHost}:${this.dataSettings?.emqxAppPort}/api/v5/bridges/${id}`;
+
+    return this.requestWithConfig('delete', url);
+  }
 }
