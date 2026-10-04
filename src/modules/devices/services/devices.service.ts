@@ -133,7 +133,7 @@ export class DevicesService {
     await this.deviceRepository.update(deviceId, updateDeviceData);
 
     // TODO: update in EMQX API
-    if (updateDeviceData.deviceStatus) {
+    if (updateDeviceData.deviceStatus && !updateDeviceData.bridgeRuleId) {
       await this.httpEmqxApiService.emqxApiDeleteBanned({
         as: 'clientid',
         who: existingDevice.deviceSerial,
@@ -160,6 +160,27 @@ export class DevicesService {
     const existingDevice = await this.findDeviceById(deviceId, userInfo);
 
     await this.deviceRepository.delete(deviceId);
+
+    // Delete de bridge emqx API
+    // Add device ban emqx API
+    if (existingDevice) {
+      const result = await Promise.allSettled([
+        this.httpEmqxApiService.emqxApiDeleteBridge(
+          existingDevice.bridgeRuleId,
+        ),
+        this.httpEmqxApiService.emqxApiPostAddBanned({
+          as: 'clientid',
+          who: existingDevice.deviceSerial,
+          reason: 'Deleted by user',
+        }),
+      ]);
+
+      result.forEach((result, index) => {
+        if (result.status === 'rejected') {
+          console.error(`Error en operación ${index}:`, result.reason);
+        }
+      });
+    }
 
     return {
       status: true,

@@ -184,4 +184,11 @@ export class EmqxApiService {
     
     return this.requestWithConfig('post', url, data);
   }
+
+   // delete bridge
+      public emqxApiDeleteBridge(id: string): Promise<number> {
+          const url = `http://${this.dataSettings?.emqxAppHost}:${this.dataSettings?.emqxAppPort}/api/v5/bridges/${id}`;
+          
+          return this.requestWithConfig('delete', url);
+      }
 }
