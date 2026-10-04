@@ -42,6 +42,12 @@ export class AuthService {
       userByUsername &&
       (await bcrypt.compare(password, userByUsername.password))
     ) {
+      await this.usersService.updateUserConnection(
+        userByUsername.id,
+        userByUsername.userAccess,
+        true,
+      );
+
       return userByUsername;
     }
     return null;

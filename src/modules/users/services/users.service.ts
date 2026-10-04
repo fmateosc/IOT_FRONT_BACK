@@ -206,7 +206,7 @@ export class UsersService {
       user: existingUser,
     };
   }
-  
+
   // update user password
   public async updateUserPasswordById(
     userPasswordData: PasswordUserDto,
@@ -330,5 +330,24 @@ export class UsersService {
     });
 
     return this.aclRepository.save(newAcl);
+  }
+
+  // actualizar la conexion del usuario
+  public async updateUserConnection(
+    userId: string,
+    userAccess: ACCESS_LEVEL | string,
+    login: boolean,
+  ): Promise<void> {
+    const userInfo: IUserInfo = {
+      userId,
+      userAccess,
+    };
+
+    const data: UpdateUserDto = {
+      userLastseen: new Date(),
+      userLogin: login,
+    };
+
+    await this.updateUserById(data, userId, userInfo);
   }
 }
