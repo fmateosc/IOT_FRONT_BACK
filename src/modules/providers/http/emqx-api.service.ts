@@ -169,4 +169,19 @@ export class EmqxApiService {
 
     return this.requestWithConfig('delete', url);
   }
+
+  // add banned device
+  public emqxApiPostAddBanned(params: IEmqxBannedParams): Promise<any> {
+    const url = `http://${this.dataSettings?.emqxAppHost}:${this.dataSettings?.emqxAppPort}/api/v5/banned`;
+    const data = {
+      as: params.as,
+      who: params.who,
+      by: params.by || 'irrigation_app_api', // Valor por defecto
+      reason: params.reason,
+      at: params.at,
+      until: params.until,
+    };
+    
+    return this.requestWithConfig('post', url, data);
+  }
 }

@@ -133,6 +133,18 @@ export class DevicesService {
     await this.deviceRepository.update(deviceId, updateDeviceData);
 
     // TODO: update in EMQX API
+    if (updateDeviceData.deviceStatus) {
+      await this.httpEmqxApiService.emqxApiDeleteBanned({
+        as: 'clientid',
+        who: existingDevice.deviceSerial,
+      });
+    } else if (!updateDeviceData.bridgeRuleId) {
+      await this.httpEmqxApiService.emqxApiPostAddBanned({
+        as: 'clientid',
+        who: existingDevice.deviceSerial,
+        reason: 'Disabled by uUser',
+      });
+    }
 
     return {
       status: true,
