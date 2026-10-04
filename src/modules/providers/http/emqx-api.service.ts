@@ -114,38 +114,67 @@ export class EmqxApiService {
   }
 
   // Bridge MQTT (broker) => HTTP (API core)
-  public emqxApiPostBridge({
-    name,
-    user,
-    serialId,
-  }: {
-    name: string;
-    user: string;
-    serialId: string;
-  }): Promise<any> {
-    const url = `http://${this.dataSettings?.emqxAppHost}:${this.dataSettings?.emqxAppPort}/api/v5/bridges`;
+  public async emqxApiPostConnector({ name }: { name: string }): Promise<any> {
+    const url = `http://${this.dataSettings?.emqxAppHost}:${this.dataSettings?.emqxAppPort}/api/v5/connectors`;
+
+    const connectorName = `http_${this.formatText(name)}`;
 
     const data = {
-      name: `http_${this.formatText(name)}`,
-      type: 'webhook',
-      ssl: { enable: false },
+      name: connectorName,
+      type: 'http',
+      enable: true,
+      url: `http://iot_api:${this.configService.get('HTTP_PORT')}/api/v1/messages/register`,
       connect_timeout: '15s',
       pool_size: 4,
-      enable: true,
-      method: 'post',
-      url: `http://iot_api:${this.configService.get('HTTP_PORT')}/api/v1/messages/register`,
-      max_retries: 3,
-      request_timeout: '15s',
       pool_type: 'random',
-      resource_opts: {
-        worker_pool_size: 1,
-        inflight_window: 100,
-        health_check_interval: 15000,
-        query_mode: 'async',
-        max_buffer_bytes: 104857600,
-      },
       enable_pipelining: 100,
-      local_topic: `/${user}/+/${serialId}/#`, // /emqx1/000002/data1/equipo01
+      headers: {
+        'content-type': 'application/json',
+      },
+      ssl: { enable: false },
+    };
+
+    return this.requestWithConfig('post', url, data);
+  }
+
+  public async emqxApiPostAction({
+    name,
+    connectorName,
+  }: {
+    name: string;
+    connectorName: string;
+  }): Promise<any> {
+    const url = `http://${this.dataSettings?.emqxAppHost}:${this.dataSettings?.emqxAppPort}/api/v5/actions`;
+
+    const data = {
+      name: this.formatText(name),
+      type: 'http',
+      connector: connectorName,
+      enable: true,
+      parameters: {
+        method: 'post',
+        headers: {
+          'content-type': 'application/json',
+        },
+      },
+    };
+
+    return this.requestWithConfig('post', url, data);
+  }
+
+  public async emqxApiPostRule({
+    topic,
+    actionName,
+  }: {
+    topic: string;
+    actionName: string;
+  }): Promise<any> {
+    const url = `http://${this.dataSettings?.emqxAppHost}:${this.dataSettings?.emqxAppPort}/api/v5/rules`;
+
+    const data = {
+      sql: `SELECT * FROM "${topic}"`,
+      enable: true,
+      actions: [`http:${actionName}`],
     };
 
     return this.requestWithConfig('post', url, data);
@@ -191,7 +220,7 @@ export class EmqxApiService {
     enable: boolean,
   ): Promise<any> {
     const url = `http://${this.dataSettings?.emqxAppHost}:${this.dataSettings?.emqxAppPort}/api/v5/bridges/${id}/enable/${enable}`;
-    
+
     return this.requestWithConfig('put', url);
   }
 

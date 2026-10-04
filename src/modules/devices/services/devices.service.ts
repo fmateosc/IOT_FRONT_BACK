@@ -44,26 +44,46 @@ export class DevicesService {
     // Guardar dispositivo | Save device
     const savedDevice = await this.deviceRepository.save(deviceEntity);
 
-    // TODO: API EMQX
+    // Recuperar el dispositivo con la relación de usuario cargada (necesario para el username real)
+    const deviceWithUser = await this.deviceRepository.findOne({
+      where: { id: savedDevice.id },
+      relations: { createUserId: true },
+    });
+
+    // API EMQX
     const isInitialized =
       await this.httpEmqxApiService.ensureSettingsInitialized();
 
     if (isInitialized) {
       try {
-        // Crea el bridge y busca los baneados | Create the bridge and search for the banned ones
-        const [respEmqxBridge, bannedList] = await Promise.all([
-          this.httpEmqxApiService.emqxApiPostBridge({
+        const username = deviceWithUser?.createUserId?.username || 'emqx';
+        const topic = `/${username}/+/${savedDevice.deviceSerial}/#`;
+
+        // 1. Crear el connector y buscar los baneados en paralelo
+        const [respConnector, bannedList] = await Promise.all([
+          this.httpEmqxApiService.emqxApiPostConnector({
             name: savedDevice.deviceName,
-            user: savedDevice.createUserId.username || 'emqx',
-            serialId: savedDevice.deviceSerial,
           }),
           this.httpEmqxApiService.emqxApiGetBannedList(),
         ]);
-        // Actualiza el dispositivo con la data del bridge | Update the device with the bridge data
+
+        // 2. Crear la action (depende del connector)
+        const respAction = await this.httpEmqxApiService.emqxApiPostAction({
+          name: savedDevice.deviceName,
+          connectorName: respConnector.name,
+        });
+
+        // 3. Crear la rule (depende de la action)
+        const respRule = await this.httpEmqxApiService.emqxApiPostRule({
+          topic,
+          actionName: respAction.name,
+        });
+
+        // Actualiza el dispositivo con la data de la rule
         const updatePromise = this.updateDeviceById(
           {
-            bridgeRuleId: `${respEmqxBridge.type}:${respEmqxBridge.name}`,
-            bridgeRuleEnabled: true, // new
+            bridgeRuleId: respRule.id,
+            bridgeRuleEnabled: true,
           },
           savedDevice.id,
           userInfo,
@@ -74,7 +94,7 @@ export class DevicesService {
           savedDevice.deviceSerial,
         );
 
-        // Ejecutar en paralelo y verificar errores | Run in parallel and check for errors
+        // Ejecutar en paralelo y verificar errores
         const [updateResult, unbanResult] = await Promise.allSettled([
           updatePromise,
           unbanPromise,
@@ -85,7 +105,6 @@ export class DevicesService {
         );
 
         if (hasError) {
-          // Rollback si algo falló | Rollback if something went wrong
           await this.deviceRepository.delete(savedDevice.id);
           throw new HttpException(
             'One or more EMQX operations failed. Changes have been rolled back.',
@@ -93,7 +112,6 @@ export class DevicesService {
           );
         }
       } catch (err) {
-        // Rollback por cualquier excepción imprevista | Rollback for any unforeseen exceptions
         await this.deviceRepository.delete(savedDevice.id);
         throw new HttpException(
           'Failed to create device due to EMQX API error. Changes have been rolled back.',
@@ -318,5 +336,51 @@ export class DevicesService {
   // EMQX DEMO
   public async testEmqxApi() {
     return this.httpEmqxApiService.emqxApiGetTopicList();
+  }
+
+  // buscar por clave - valor
+  public async findBy({
+    key,
+    value,
+  }: {
+    key: keyof DeviceDto;
+    value: any;
+  }): Promise<DevicesEntity | null> {
+    const device = await this.deviceRepository
+      .createQueryBuilder('device')
+      .leftJoinAndSelect('device.createUserId', 'createUserId')
+      .where(`device.${key} = :value`, { value })
+      .getOne();
+
+    return device;
+  }
+
+  // Update device status (Actualizado evitar error)
+  public async updateDeviceConnection(
+    deviceSerial: string,
+    status: boolean,
+  ): Promise<void> {
+    const device = await this.findBy({
+      key: 'deviceSerial',
+      value: deviceSerial,
+    });
+
+    if (!device) {
+      this.logger.warn(`Device with serial "${deviceSerial}" not found`);
+
+      return;
+    }
+
+    const userInfo: IUserInfo = {
+      userId: device.createUserId.id,
+      userAccess: device.createUserId.userAccess,
+    };
+
+    const data: UpdateDeviceDto = {
+      deviceLastseen: new Date(),
+      deviceOnline: status,
+    };
+
+    await this.updateDeviceById(data, device.id, userInfo);
   }
 }
