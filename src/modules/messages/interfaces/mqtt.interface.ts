@@ -1,4 +1,4 @@
-interface IMqttMessage {
+export interface IMqttMessage {
   publish_received_at: number;
   pub_props: {
     'User-Property': Record<string, unknown>;

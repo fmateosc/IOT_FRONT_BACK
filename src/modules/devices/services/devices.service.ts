@@ -106,6 +106,7 @@ export class DevicesService {
 
         if (hasError) {
           await this.deviceRepository.delete(savedDevice.id);
+          
           throw new HttpException(
             'One or more EMQX operations failed. Changes have been rolled back.',
             HttpStatus.INTERNAL_SERVER_ERROR,
@@ -113,6 +114,7 @@ export class DevicesService {
         }
       } catch (err) {
         await this.deviceRepository.delete(savedDevice.id);
+
         throw new HttpException(
           'Failed to create device due to EMQX API error. Changes have been rolled back.',
           HttpStatus.INTERNAL_SERVER_ERROR,
