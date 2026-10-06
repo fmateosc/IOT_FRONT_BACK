@@ -10,9 +10,12 @@ import { DevicesModule } from './modules/devices/devices.module.js';
 import { SettingsModule } from './modules/settings/settings.module.js';
 import { HttpProviderModule } from './modules/providers/http-provider.module.js';
 import { MessagesModule } from './modules/messages/messages.module.js';
+import { TaskModule } from './modules/schedules/task/task.module.js';
+import { ScheduleModule } from '@nestjs/schedule';
 
 @Module({
   imports: [
+    ScheduleModule.forRoot(),
     ConfigModule.forRoot({
       isGlobal: true,
       load: [typeorm],
@@ -35,6 +38,7 @@ import { MessagesModule } from './modules/messages/messages.module.js';
     SettingsModule,
     HttpProviderModule,
     MessagesModule,
+    TaskModule,
   ],
   controllers: [],
   providers: [],

@@ -6,6 +6,7 @@ import { BaseEntity } from '../../../config/base.entity.js';
 import { ACCESS_LEVEL, USER_ORIGIN } from '../../../constants/index.js';
 import { AclEntity } from '../../auth/entities/acl.entity.js';
 import { DevicesEntity } from '../../devices/entities/devices.entity.js';
+import { TaskEntity } from '../../schedules/task/entities/task.entity.js';
 
 @Entity({ name: 'users' })
 export class UsersEntity extends BaseEntity {
@@ -84,4 +85,8 @@ export class UsersEntity extends BaseEntity {
 
   @OneToMany('DevicesEntity', (device: DevicesEntity) => device.createUserId)
   userDevices: Relation<DevicesEntity>[];
+
+  // task
+  @OneToMany('TaskEntity', (task: TaskEntity) => task.createUserId)
+  userTask: Relation<TaskEntity>[];
 }
