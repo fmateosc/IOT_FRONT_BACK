@@ -12,6 +12,7 @@ import { UsersService } from '../../../users/services/users.service.js';
 import { IUserInfo } from '../../../auth/intefaces/auth.interface.js';
 import { TaskDto } from '../dtos/task.dto.js';
 import { ACCESS_LEVEL } from '../../../../constants/index.js';
+import { UpdateTaskDto } from '../dtos/update.task.dto.js';
 
 @Injectable()
 export class TaskService {
@@ -180,5 +181,36 @@ export class TaskService {
     }
 
     return taskResult;
+  }
+
+  // actualizar task por el id
+  async updateTaskById(
+    taskId: string,
+    updateTaskData: UpdateTaskDto,
+    userInfo: IUserInfo,
+  ): Promise<{ status: boolean; task: TaskEntity }> {
+    const task = await this.findTaskById(taskId, userInfo);
+
+    if (updateTaskData.topic) {
+      updateTaskData.topic =
+        `/${task.createUserId.username}/` + updateTaskData.topic;
+    }
+
+    await this.taskRepository.update(task.id, updateTaskData);
+
+    this.deleteCronJob(`task_${task.id}`);
+    this.addScheduleTask({ ...task, ...updateTaskData });
+
+    return {
+      status: true,
+      task: { ...task, ...updateTaskData },
+    };
+  }
+
+  // Eliminar un cronJob del sistema
+  private deleteCronJob(name: string) {
+    this.schedulerRegistry.deleteCronJob(name);
+    
+    this.logger.debug(`Cron job "${name}" deleted`);
   }
 }
