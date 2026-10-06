@@ -13,6 +13,7 @@ import { IUserInfo } from '../../../auth/intefaces/auth.interface.js';
 import { TaskDto } from '../dtos/task.dto.js';
 import { ACCESS_LEVEL } from '../../../../constants/index.js';
 import { UpdateTaskDto } from '../dtos/update.task.dto.js';
+import { PaginationDto } from '../../../../common/dtos/pagination.dto.js';
 
 @Injectable()
 export class TaskService {
@@ -210,7 +211,43 @@ export class TaskService {
   // Eliminar un cronJob del sistema
   private deleteCronJob(name: string) {
     this.schedulerRegistry.deleteCronJob(name);
-    
+
     this.logger.debug(`Cron job "${name}" deleted`);
+  }
+
+  // buscar todas las tareas
+  public async findAllTasks(
+    paginationDto: PaginationDto,
+    userInfo: IUserInfo,
+  ): Promise<{
+    limit: number;
+    offset: number;
+    count: number;
+    tasks: TaskEntity[];
+  }> {
+    const { userId, userAccess } = userInfo;
+    const limit = paginationDto.limit || Number(process.env.LIMIT) || 1000;
+    const offset = paginationDto.offset || Number(process.env.OFFSET) || 0;
+
+    const queryBuilder = this.taskRepository
+      .createQueryBuilder('tasks')
+      .leftJoinAndSelect('tasks.createUserId', 'createUserId')
+      .take(limit)
+      .skip(offset);
+
+    if (userAccess === ACCESS_LEVEL.ADMIN) {
+      queryBuilder.where('tasks.createUserId = :createUserId', {
+        createUserId: userId,
+      });
+    }
+
+    const [tasks, count] = await queryBuilder.getManyAndCount();
+
+    return {
+      limit,
+      offset,
+      count,
+      tasks,
+    };
   }
 }

@@ -8,6 +8,7 @@ import {
   ParseUUIDPipe,
   Post,
   Put,
+  Query,
   UseGuards,
 } from '@nestjs/common';
 import { AuthGuard } from '../../../auth/guard/auth.guard.js';
@@ -19,6 +20,7 @@ import { TaskDto } from '../dtos/task.dto.js';
 import { TaskEntity } from '../entities/task.entity.js';
 import { UpdateTaskDto } from '../dtos/update.task.dto.js';
 import * as authInterface from '../../../auth/intefaces/auth.interface.js';
+import { PaginationDto } from '../../../../common/dtos/pagination.dto.js';
 
 @Controller('task')
 @UseGuards(AuthGuard, AccessLevelGuard)
@@ -55,5 +57,20 @@ export class TaskController {
       updateTaskData,
       userInfo,
     );
+  }
+
+  // buscar todas las tareas del sistema
+  @Access('ADMIN')
+  @Get('all')
+  public async findAllTasks(
+    @Query() paginationDto: PaginationDto,
+    @GetUserInfo() userInfo: authInterface.IUserInfo,
+  ): Promise<{
+    limit: number;
+    offset: number;
+    count: number;
+    tasks: TaskEntity[];
+  }> {
+    return await this.taskService.findAllTasks(paginationDto, userInfo);
   }
 }
