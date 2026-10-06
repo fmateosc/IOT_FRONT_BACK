@@ -1,6 +1,6 @@
 //src/modules/schedules/task/services/task.service.ts
 
-import { Injectable, Logger } from '@nestjs/common';
+import { HttpException, HttpStatus, Injectable, Logger } from '@nestjs/common';
 import { SchedulerRegistry } from '@nestjs/schedule';
 import { TaskEntity } from '../entities/task.entity.js';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -11,6 +11,7 @@ import { MqttService } from '../../../providers/mqtt/mqtt.service.js';
 import { UsersService } from '../../../users/services/users.service.js';
 import { IUserInfo } from '../../../auth/intefaces/auth.interface.js';
 import { TaskDto } from '../dtos/task.dto.js';
+import { ACCESS_LEVEL } from '../../../../constants/index.js';
 
 @Injectable()
 export class TaskService {
@@ -149,5 +150,35 @@ export class TaskService {
       message: `Task "${task?.name}" was created successfully`,
       task,
     };
+  }
+
+  // buscar una tarea por el Id
+  public async findTaskById(
+    taskId: string,
+    userInfo: IUserInfo,
+  ): Promise<TaskEntity> {
+    const { userId, userAccess } = userInfo;
+
+    const queryBuilder = this.taskRepository
+      .createQueryBuilder('task')
+      .leftJoinAndSelect('task.createUserId', 'createUserId')
+      .where({ id: taskId });
+
+    if (userAccess === ACCESS_LEVEL.ADMIN) {
+      queryBuilder.andWhere('task.createUserId = :createUserId', {
+        createUserId: userId,
+      });
+    }
+
+    const taskResult = await queryBuilder.getOne();
+
+    if (!taskResult) {
+      throw new HttpException(
+        `Task with Id: "${taskId}" not found`,
+        HttpStatus.NOT_FOUND,
+      );
+    }
+
+    return taskResult;
   }
 }

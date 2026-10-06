@@ -1,6 +1,6 @@
 // src/modules/schedules/task/controllers/task.controller.ts
 
-import { Body, Controller, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, ParseUUIDPipe, Post, UseGuards } from '@nestjs/common';
 import { AuthGuard } from '../../../auth/guard/auth.guard.js';
 import { AccessLevelGuard } from '../../../auth/guard/access-level.guard.js';
 import { TaskService } from '../services/task.service.js';
@@ -22,5 +22,14 @@ export class TaskController {
     @GetUserInfo() userInfo: authInterface.IUserInfo,
   ): Promise<{ message: string; task: TaskEntity }> {
     return this.taskService.createNewTask(newTaskData, userInfo);
+  }
+
+  @Access('ADMIN')
+  @Get('find/:taskId')
+  public async findTaskById(
+    @Param('taskId', ParseUUIDPipe) taskId: string,
+    @GetUserInfo() userInfo: authInterface.IUserInfo,
+  ): Promise<TaskEntity> {
+    return await this.taskService.findTaskById(taskId, userInfo);
   }
 }
