@@ -250,4 +250,31 @@ export class TaskService {
       tasks,
     };
   }
+
+  // eliminar tarea por el Id
+  public async deleteTaskById(
+    taskId: string,
+    userInfo: IUserInfo,
+  ): Promise<{ status: boolean; task: TaskEntity }> {
+    const existingTask = await this.findTaskById(taskId, userInfo); // filtro de usuario autorizado
+    try {
+      await this.taskRepository.delete(taskId);
+
+      this.deleteCronJob(`task_${existingTask.id}`);
+
+      return {
+        status: true,
+        task: existingTask,
+      };
+    } catch (error) {
+      await this.taskRepository.save(existingTask);
+
+      this.addScheduleTask(existingTask);
+
+      throw new HttpException(
+        'Failed to delete cron job. Task was restored.',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
 }

@@ -3,6 +3,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Param,
   ParseUUIDPipe,
@@ -72,5 +73,15 @@ export class TaskController {
     tasks: TaskEntity[];
   }> {
     return await this.taskService.findAllTasks(paginationDto, userInfo);
+  }
+
+  // eliminar tarea del sistema y de BD
+  @Access('ADMIN')
+  @Delete('delete/:taskId')
+  public async deleteTaskById(
+    @Param('taskId', ParseUUIDPipe) taskId: string,
+    @GetUserInfo() userInfo: authInterface.IUserInfo,
+  ): Promise<{ status: boolean; task: TaskEntity }> {
+    return await this.taskService.deleteTaskById(taskId, userInfo);
   }
 }
